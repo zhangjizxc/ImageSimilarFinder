@@ -1,0 +1,2 @@
+# ImageSimilarFinder
+在指定的文件夹中找寻相同的res文件
