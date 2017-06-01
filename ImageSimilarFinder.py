@@ -89,10 +89,12 @@ def isPathInList(list, path):
     return False
 
 def arrangePics(targetDir, picDir):
+    targetDirPathLen=len(targetDir)
+    count=0
     for path, d, filelist in os.walk(targetDir):
         if (not path.endswith('.git')) and isPathInList(targetLimitedSubDirs, path):
             for filename in filelist:
-                if (filename.endswith('jpg') or filename.endswith('png')):
+                if (filename.endswith('jpg') or filename.endswith('png') or filename.endswith('jpeg') or filename.endswith('gif')):
                     fileNameWithPath = os.path.join(path, filename)
                     image = load_image(fileNameWithPath)
                     if (image is not None):
@@ -100,8 +102,12 @@ def arrangePics(targetDir, picDir):
                         tempPath = os.path.join(picDir, str(ratio))
                         if (not os.path.exists(tempPath)):
                             os.mkdir(tempPath)
-                        tempFileNameWithPath = os.path.join(tempPath, filename)
+                        filenameNew=fileNameWithPath[targetDirPathLen+1:].replace('/', "_", 50)
+                        tempFileNameWithPath = os.path.join(tempPath, filenameNew)
+                        print(fileNameWithPath+"  copy to "+tempFileNameWithPath)
+                        count = count + 1
                         shutil.copy(fileNameWithPath, tempFileNameWithPath)
+    print("Total Image count is "+str(count))
 
 
 if __name__ == '__main__':
@@ -125,14 +131,13 @@ if __name__ == '__main__':
     targetDir = args.path
     targetLimitedSubDirs=[]
     for subdir in args.filter:
-        targetLimitedSubDirs.append(subdir)
-    # targetLimitedSubDirs= [targetDir+'/frameworks', targetDir+'/packages']
+        targetLimitedSubDirs.append(os.path.join(targetDir,subdir))
     print targetLimitedSubDirs
     resultDir = targetDir + "/../SimilarImgResults"
     tempDir = resultDir + "/AllPics"
     targetDirPathLen = len(targetDir)
-    imageSize = 16
-    threshold = 5
+    imageSize = args.size
+    threshold = args.threshold
 
     if (os.path.exists(resultDir)):
         print('We need cLear the result dir')
