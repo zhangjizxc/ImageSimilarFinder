@@ -109,6 +109,51 @@ def arrangePics(targetDir, picDir):
                         shutil.copy(fileNameWithPath, tempFileNameWithPath)
     print("Total Image count is "+str(count))
 
+def sortPicsBySimilarity(allPicsDir, imageSize, threshold, sortedPicsDir, similarPicsDir):
+       allPicsDirLen = len(allPicsDir) 
+       for path,d,filelist in os.walk(allPicsDir):
+        L = []
+        for filename in filelist:
+            fileNameWithPath = os.path.join(path, filename)
+            image = load_image(fileNameWithPath)
+            if image is not None:
+                try:
+                    hash = dhash.dhash_int(image, size=imageSize)
+                except:
+                    continue
+            L.append((hash, filename))
+
+        sortedPath = os.path.join(sortedPicsDir, path[allPicsDirLen+1:])
+        similarPath = os.path.join(similarPicsDir, path[allPicsDirLen+1:])
+        if not os.path.exists(sortedPath):
+            os.mkdir(sortedPath)
+        if not os.path.exists(similarPath):
+            os.mkdir(similarPath)
+        S = sorted(L, key=lambda l: l[0])
+        count = 0
+        for item in S:
+            origFile = os.path.join(path, item[1])
+            if count > 0:
+                lastItem = S[count-1]
+                hash1 = lastItem[0]
+                hash2 = item[0]
+                num_bits_different = dhash.get_num_bits_different(hash1, hash2)
+                diff = 100 * num_bits_different / (imageSize * imageSize * 2)
+                newFileName = str(count) + "_" + str(diff) + "%_" + item[1]
+                if diff <= threshold:
+                   shutil.copy(origFile, os.path.join(similarPath, newFileName))
+                   if count == 1:
+                       lastNewFileName = str(count - 1)+"_"+lastItem[1]
+                   else:
+                       lastNewFileName = str(count - 1)+ "_" + str(lastDiff) + "%_" + lastItem[1]
+                   lastNewFilePath=os.path.join(similarPath, lastNewFileName)
+                   if not os.path.exists(lastNewFilePath):
+                      shutil.copy(os.path.join(path, lastItem[1]), lastNewFilePath)
+                lastDiff=diff
+            else:
+                newFileName = str(count)+"_"+item[1]
+            shutil.copy(origFile, os.path.join(sortedPath, newFileName))
+            count = count+1
 
 if __name__ == '__main__':
     import argparse
@@ -116,7 +161,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--size', type=int, default=16,
                         help='width and height of dhash image size, default %(default)d')
-    parser.add_argument('-t', '--threshold', type=int, default=5,
+    parser.add_argument('-t', '--threshold', type=int, default=20,
                         help='The threshold to judge whether similar image or not')
     parser.add_argument('-p', '--path', nargs='?',
                         help='The path to find.')
@@ -138,10 +183,12 @@ if __name__ == '__main__':
     print targetLimitedSubDirs
     resultDir = targetDir + "/../SimilarImgResults"
     allPicsDir = resultDir + "/AllPics"
-    allPicsDirLen = len(allPicsDir)
-    sortedPicsDir = resultDir+"/FinalSortedPics"
+    sortedPicsDir = resultDir+"/SortedPics"
+    similarPicsDir = resultDir+"/SimilarPics"
     imageSize = args.size
     threshold = args.threshold
+
+    begin = datetime.datetime.now()
 
     if (os.path.exists(resultDir)):
         print('We need cLear the result dir')
@@ -149,39 +196,10 @@ if __name__ == '__main__':
     os.mkdir(resultDir)
     os.mkdir(allPicsDir)
     os.mkdir(sortedPicsDir)
+    os.mkdir(similarPicsDir)
 
-    begin = datetime.datetime.now()
     arrangePics(targetDir, allPicsDir)
-    for path,d,filelist in os.walk(allPicsDir):
-        print(path)
-        L = []
-        for filename in filelist:
-            fileNameWithPath = os.path.join(path, filename)
-            image = load_image(fileNameWithPath)
-            if image is not None:
-                try:
-                    hash = dhash.dhash_int(image, size=imageSize)
-                except:
-                    continue
-            L.append((hash, filename))
-
-        sortedPath = os.path.join(sortedPicsDir, path[allPicsDirLen+1:])
-        if not os.path.exists(sortedPath):
-            os.mkdir(sortedPath)
-        S = sorted(L, key=lambda l: l[0])
-        count = 0
-        for item in S:
-            origFile = os.path.join(path, item[1])
-            if count > 0:
-                lastItem = S[count-1]
-                hash1 = lastItem[0]
-                hash2 = item[0]
-                num_bits_different = dhash.get_num_bits_different(hash1, hash2)
-                diff = 100 * num_bits_different / (imageSize * imageSize * 2)
-                newFile = os.path.join(sortedPath, str(count) + "_" + str(diff) + "%_" + item[1])
-            else:
-                newFile = os.path.join(sortedPath, str(count)+"_"+item[1])
-            shutil.copy(origFile, newFile)
-            count = count+1
+    sortPicsBySimilarity(allPicsDir,imageSize, threshold, sortedPicsDir, similarPicsDir)
+    
     end = datetime.datetime.now()
-    print("Total Used Time: " + str(end - begin))
+    print("Finished! Total Used Time: " + str(end - begin)+"  Pls check the dir "+resultDir)

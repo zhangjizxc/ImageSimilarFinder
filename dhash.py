@@ -62,8 +62,8 @@ def get_grays(image, width, height):
                 return [ord(c) for c in blob[::3]]
 
     elif PIL is not None and isinstance(image, PIL.Image.Image):
-        gray_image = image.convert('L')
-        small_image = gray_image.resize((width, height), PIL.Image.ANTIALIAS)
+#        gray_image = image.convert('L')
+        small_image = image.resize((width, height), PIL.Image.ANTIALIAS)
         return list(small_image.getdata())
 
     else:
